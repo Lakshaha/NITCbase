@@ -1,38 +1,3 @@
-// #include "Buffer/StaticBuffer.h"
-// #include "Cache/OpenRelTable.h"
-// #include "Disk_Class/Disk.h"
-// #include "FrontendInterface/FrontendInterface.h"
-// #include <cstring>
-// #include <iostream>
-// 
-// int main(int argc, char *argv[]) {
-  // /* Initialize the Run Copy of Disk */
-  // Disk disk_run; //declaration of disk class
-  // //The disl function expects 2 arguments
-  // // StaticBuffer buffer; of size 2048 char, 1 char 1 byte
-  // unsigned char buffer[BLOCK_SIZE];
-  // Disk::readBlock(buffer, 7000);
-// 
-  // char message[] = "Hello";
-  // memcpy(buffer+20, message, 6);
-  // //Now, buffer[20] = 'h', buffer[21] = 'e' ...
-// 
-  // Disk::writeBlock(buffer,7000);
-// 
-  // //reading from another buffer to see updated stuff
-  // unsigned char buffer2[BLOCK_SIZE];
-  // Disk::readBlock(buffer2, 7000);
-  // char message2[6];
-  // memcpy(message2, buffer2+20, 6);
-  // std :: cout << message2;
-// 
-  // return 0;
-  // // OpenRelTable cache;
-// 
-  // //return FrontendInterface::handleFrontend(argc, argv);
-// }
-
-//Assignment 1
 #include "Buffer/StaticBuffer.h"
 #include "Cache/OpenRelTable.h"
 #include "Disk_Class/Disk.h"
@@ -41,26 +6,51 @@
 #include <iostream>
 
 int main(int argc, char *argv[]) {
-	/* Initialize the Run Copy of Disk */
-	Disk disk_run; //declaration of disk class
-	//The disl function expects 2 arguments
-	// StaticBuffer buffer; of size 2048 char, 1 char 1 byte
 
-	unsigned char buffer[BLOCK_SIZE];
-	char message[10];
+	//an instance of the Disk class to run readblock and write block
+	Disk disk_run;
 
-	Disk :: readBlock(buffer, 0);
-	memcpy(message, buffer, 10);
+	//create object for RC, AC
+	RecBuffer relCatBuffer(RELCAT_BLOCK);
+	RecBuffer attrCatBuffer(ATTRCAT_BLOCK);
 
-	for (auto x : message) {
-		std :: cout << (int)x << " ";
+	//struct type of HeadInfo, storing meta info about blocks
+	HeadInfo relCatHeader;
+	HeadInfo attrCatHeader;
+
+	
+  	// load the headers of both the blocks into relCatHeader and attrCatHeader
+	relCatBuffer.getHeader(&relCatHeader);
+	attrCatBuffer.getHeader(&attrCatHeader);
+
+	for (int i=0; i<relCatHeader.numEntries; i++)
+	{
+		//RELCAT_NO_ATTRS global const for 6 here
+		Attribute relCatRecord[RELCAT_NO_ATTRS];
+		relCatBuffer.getRecord(relCatRecord, i);
+
+		printf("Relation: %s\n", relCatRecord[RELCAT_REL_NAME_INDEX].sVal);
+
+		for (int j=0; j<attrCatHeader.numEntries; j++)
+		{
+			Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
+			attrCatBuffer.getRecord(attrCatRecord, j);
+
+			if(strcmp(attrCatRecord[ATTRCAT_REL_NAME_INDEX].sVal , relCatRecord[RELCAT_REL_NAME_INDEX].sVal) == 0)
+			{
+				const char *attrType = attrCatRecord[ATTRCAT_ATTR_TYPE_INDEX].nVal == NUMBER ? "NUM" : "STR";
+		        printf("  %s: %s\n", attrCatRecord[ATTRCAT_ATTR_NAME_INDEX].sVal, attrType);
+			}
+		}
+		printf("\n");
+
+		
 	}
 
 	return 0;
+	
 
 
-
-	// OpenRelTable cache;  
-
-//return FrontendInterface::handleFrontend(argc, argv);
 }
+
+
