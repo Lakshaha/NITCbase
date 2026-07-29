@@ -11,17 +11,26 @@ int main(int argc, char* argv[])
 	// Rec buffer takes input block num if block alr allocated
 	//declaring object of RecBuffer class, for the specific vlbovl
 	RecBuffer relCatBuffer(RELCAT_BLOCK); //relcat_block is basically block num 4
-	RecBuffer attrCatBuffer(ATTRCAT_BLOCK); //attrcat_block is block 5
-
+	RecBuffer attrCatBuffer(ATTRCAT_BLOCK); //attrcat_block is bl
+	
+	
 	HeadInfo relCatHeader;
 	HeadInfo attrCatHeader;
-
+	HeadInfo attrCatHeader2; //for the Rblock
+		
 	//setHeader and getHeader take pointer HeadInfo as argument
 	// HeadInfo [BlockType, pblock, lblock, rblock, #entries, #attr, #slot, reserved[4]]
 
 	relCatBuffer.getHeader(&relCatHeader);
 	attrCatBuffer.getHeader(&attrCatHeader);
 
+
+	RecBuffer attrCatBuffer2(attrCatHeader.rblock);
+	attrCatBuffer2.getHeader(attrCatHeader2);
+
+	
+	
+	//1st loop to print block 1
 	for (int i=0; i<relCatHeader.numEntries; i++)
 	{
 		Attribute relCatRecord[RELCAT_NO_ATTRS]; // Number of attributes present in one entry / record of the Relation Catalog
@@ -42,12 +51,28 @@ int main(int argc, char* argv[])
 			}
 			
 		}
+
+		for (int j=0; j<attrCatHeader2.numEntries; j++)
+		{
+			Attribute attrCatRecord[ATTRCAT_NO_ATTRS];
+			attrCatBuffer2.getRecord(attrCatRecord, j);
+			if (strcmp(attrCatRecord[0].sVal,relCatRecord[0].sVal) == 0) //works only if the names are same
+			{
+				const char *attrType = attrCatRecord[2].nVal == NUMBER ? "NUM" : "STR";
+				printf(" %s: %s\n", attrCatRecord[1].sVal, attrType);
+			}
+		}
+		
 		printf("\n");
 		
 	}
+
+	//2nd loop to print 2nd block
+	
+
+	
 	return 0;
 	
 }
 
 //insteaf of idx 0,1,2 you can use the global constant also, but too complicated other wise
-

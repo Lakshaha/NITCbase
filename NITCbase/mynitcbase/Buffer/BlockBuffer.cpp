@@ -5,51 +5,53 @@
 
 BlockBuffer::BlockBuffer(int blockNum)
 {
-	this->blockNum = blockNum;	
+	this->blockNum = blockNum;	 // initialise this.blockNum with the argument
 }
 
 //calls the parent class constructor
 RecBuffer :: RecBuffer(int blockNum) : BlockBuffer :: BlockBuffer(blockNum){}
 
 //load the block header into argument pointer
-int BlockBuffer :: getHeader(struct HeadInfo *head){
+int BlockBuffer::getHeader(struct HeadInfo* head) //tells its block buffer class
+{
 	unsigned char buffer[BLOCK_SIZE];
 
-	//reading the block at the given block number to given buffer
 	Disk :: readBlock(buffer, this->blockNum);
 
-	//populate the num entries, num attr, numslots inm head
-	memcpy(&head->numSlots, buffer+24,4);	
-	memcpy(&head->numAttrs, buffer+20,4);	
-	memcpy(&head->numEntries, buffer+16,4);
-	memcpy(&head->rblock, buffer+12,4);
-	memcpy(&head->lblock, buffer+8,4);
+	// populate the numEntries, numAttrs and numSlots fields in *head
+    memcpy(&head->numSlots, buffer + 24, 4);
+    memcpy(&head->numEntries, buffer + 16, 4);
+    memcpy(&head->numAttrs, buffer + 20, 4);
+    memcpy(&head->rblock, buffer + 12, 4);
+    memcpy(&head->lblock, buffer + 8, 4);
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
-int RecBuffer::getRecord(union Attribute *rec, int slotNum)
+
+// load the record at slotNum into the argument pointer, basically slotNum in rec
+int RecBuffer :: getRecord(union Attribute *rec, int slotNum)
 {
 	struct HeadInfo head;
-
-	//get the header using getHeader(&pointer)
+	
+	// get the header using this.getHeader() function
 	this->getHeader(&head);
 
 	int attrCount = head.numAttrs;
 	int slotCount = head.numSlots;
+	
 
-	//read the block at this.blocknum to buffer
+	
+    // read the block at this.blockNum into a buffer
 	unsigned char buffer[BLOCK_SIZE];
 	Disk::readBlock(buffer, this->blockNum);
 
-	/* record at slotNum will be at offset HEADER_SIZE + slotMapSize + (recordSize * slotNum)
-	     - each record will have size attrCount * ATTR_SIZE
-	     - slotMap will be of size slotCount
-	 */
-
-	int recordSize = attrCount * ATTR_SIZE;
-	unsigned char *slotPointer = buffer + HEADER_SIZE + head.numSlots + (recordSize * slotNum);
+	int recordSize = attrCount * ATTR_SIZE; //attrSize is 16
+	int offset = HEADER_SIZE + head.numSlots + (recordSize * slotNum);
+	unsigned char *slotPointer = buffer + offset;
 
 	memcpy(rec, slotPointer, recordSize);
+
 	return SUCCESS;
+
 }
