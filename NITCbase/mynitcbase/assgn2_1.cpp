@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
 
 	RecBuffer attrCatBuffer2(attrCatHeader.rblock);
-	attrCatBuffer2.getHeader(attrCatHeader2);
+	attrCatBuffer2.getHeader(&attrCatHeader2);
 
 	
 	
