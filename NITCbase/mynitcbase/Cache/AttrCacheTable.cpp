@@ -7,6 +7,8 @@ AttrCacheEntry* AttrCacheTable::attrCache[MAX_OPEN]; //array to hold pointers
 /* returns the attrOffset-th attribute for the relation corresponding to relId
 NOTE: this function expects the caller to allocate memory for `*attrCatBuf`
 */
+
+//we get attribute acc to relative offset
 int AttrCacheTable::getAttrCatEntry(int relId, int attrOffset, AttrCatEntry* attrCatBuf)
 {
 	if (relId < 0 or relId >= MAX_OPEN)
@@ -29,6 +31,37 @@ int AttrCacheTable::getAttrCatEntry(int relId, int attrOffset, AttrCatEntry* att
 	}
 	return E_ATTRNOTEXIST;
 }
+
+
+//same but finding the attribute with teh same name
+int AttrCacheTable::getAttrCatEntry(int relId, char attrName[ATTR_SIZE], AttrCatEntry* attrCatBuf)
+{
+	if (relId < 0 or relId >= MAX_OPEN)
+	{
+		return E_OUTOFBOUND;
+	}
+
+	if (attrCache[relId] == nullptr)
+	{
+		return E_RELNOTOPEN;
+	}
+
+	for (AttrCacheEntry* entry= attrCache[relId]; entry != nullptr; entry = entry->next)
+	{
+		if (strcmp(entry->attrCatEntry.attrName, attrName) == 0)
+		{
+			*attrCatBuf = entry->attrCatEntry;
+			return SUCCESS;
+		}
+	}
+	return E_ATTRNOTEXIST;
+}
+
+
+
+
+
+
 
 /* Converts a attribute catalog record to AttrCatEntry struct
     We get the record as Attribute[] from the BlockBuffer.getRecord() function.

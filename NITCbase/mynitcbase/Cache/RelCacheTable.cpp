@@ -41,3 +41,65 @@ void RelCacheTable :: recordToRelCatEntry(union Attribute record[RELCAT_NO_ATTRS
 	relCatEntry->lastBlk = (int)record[RELCAT_LAST_BLOCK_INDEX].nVal;
 	relCatEntry->numSlotsPerBlk = (int)record[RELCAT_NO_SLOTS_PER_BLOCK_INDEX].nVal;
 }
+
+
+/* will return the searchIndex for the relation corresponding to `relId
+NOTE: this function expects the caller to allocate memory for `*searchIndex`
+*/
+
+
+//returning SearchIdx for linear search
+int RelCacheTable :: getSearchIndex(int relId, RecId* searchIndex)
+{
+	if (relId < 0 || relId >= MAX_OPEN)
+	{
+		return E_OUTOFBOUND;
+	}
+
+	if (relCache[relId] == nullptr)
+	{
+		return E_RELNOTOPEN;
+	}
+
+	//copy the searchIDx of relId to RECId
+
+	*searchIndex = relCache[relId]->searchIndex;
+	return SUCCESS;
+}
+
+//setting Search Index after linear search
+int RelCacheTable :: setSearchIndex(int relId, RecId* searchIndex)
+{
+	if (relId < 0 || relId >= MAX_OPEN)
+	{
+		return E_OUTOFBOUND;
+	}
+
+	if (relCache[relId] == nullptr)
+	{
+		return E_RELNOTOPEN;
+	}
+
+	//update the search idx in relCache
+	relCache[relId]->searchIndex = *searchIndex;
+
+	return SUCCESS;
+	
+}
+
+int RelCacheTable :: resetSearchIndex(int relId)
+{
+	if (relId < 0 || relId >= MAX_OPEN)
+	{
+		return E_OUTOFBOUND;
+	}
+
+	if (relCache[relId] == nullptr)
+	{
+		return E_RELNOTOPEN;
+	}
+
+	relCache[relId]->searchIndex = {-1,-1};
+	return SUCCESS;
+}
+
