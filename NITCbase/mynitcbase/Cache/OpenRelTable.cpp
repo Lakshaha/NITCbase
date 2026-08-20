@@ -119,10 +119,43 @@ OpenRelTable:: OpenRelTable() {
     last->next = nullptr;
     AttrCacheTable::attrCache[2] = head;
 
+
+
+    //setting up tableMetaInfo Entries
+    for (int i=0; i<MAX_OPEN; i++)
+    {
+    	if (i == RELCAT_RELID)
+    	{
+    		tableMetaInfo[i].free = false;
+    		strcpy(tableMetaInfo[i].relName, RELCAT_RELNAME);	
+    	}
+    	if (i == ATTRCAT_RELID)
+    	{
+    		tableMetaInfo[i].free = false;
+    		strcpy(tableMetaInfo[i].relName, ATTRCAT_RELNAME);
+    	}
+    	else
+    	{
+    		tableMetaInfo[i].free = true;
+    	}
+    }
+
 }
 
 
 OpenRelTable::~OpenRelTable(){
+	//close all open relation from relid 2, cuz 0 and 1 are rel and attr cat
+
+	for (int i=2; i<MAX_OPEN; ++i)
+	{
+		if (!tableMetaInfo[i].free)
+		{
+			OpenRelTable::closeRel(i);
+		}
+	}
+
+
+
     // free all the memories that is allocted in the constructor
     for(int i = 0; i<MAX_OPEN; i++){
         if(RelCacheTable::relCache[i] != nullptr){
@@ -158,4 +191,70 @@ int OpenRelTable :: getRelId(char relName[ATTR_SIZE])
 
 	
 	return E_RELNOTOPEN;
+}
+
+
+
+//returns index of first unoccupied entry in open relation table
+int OpenRelTable::getFreeOpenRelTableEntry()
+{
+	for (int i=0; i<MAX_OPEN; i++)
+	{
+		if (tableMetaInfo[i].free)
+		{
+			return i;
+		}
+	}
+	return E_CACHEFULL;
+}
+
+//returns the index of the relation if relation open
+int OpenRelTable::getRelId(unsigned char relName[ATTR_SIZE])
+{
+	for (int i=0; i<MAX_OPEN; i++)
+	{
+		if (strcmp(relName, tableMetaInfo[i].relName) == 0)
+		{
+			return i;
+		}
+	}
+	return E_RELNOTOPEN;
+}
+
+
+int OpenRelTable::openRel(unsigned char relName[ATTR_SIZE])
+{
+	int relId = getRelId(relName); //check if a relId entry already exists in the table
+	if (relId != E_RELNOTOPEN)
+	{
+		return relId;
+	}
+
+	relId = getFreeOpenRelTableEntry(); //find a free rel table enbtry
+	if (relId < 0)
+	{
+		return E_CACHEFULL;
+	}
+
+	//setting up relation cache entry for relation
+
+	//search for entry with relation name, relName
+	Attribute relationName;
+	strcpy(relationName.sVal, relName);
+	//manually reset in relation catalog
+	RelCacheTable::resetSearchIndex(RELCAT_RELID);
+
+	char relCatAttrRelName[ATTR_SIZE];
+	strcpy(relCatAttrRelName, RELCAT_ATTR_RELNAME);
+	
+	RecId relCatRecId = BlockAccess::linearSearch(RELCAT_RELID, relCatAttrRelName, relationName.sVal, EQ);
+
+	//if relation not found in relation catalog
+	if(relCatRecId.block == -1 && relCatRecId.slot == -1)
+	{
+        return E_RELNOTEXIST;
+    }
+
+	//read the record entry and make relCache entry out of it
+	
 }
