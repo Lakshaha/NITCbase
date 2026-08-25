@@ -60,11 +60,29 @@ int RecBuffer :: getRecord(union Attribute *rec, int slotNum)
 
 }
 
+
+
+//will not checkl if block is init or not, it will copy wtv content is there in diskblock to buffr
 int BlockBuffer :: loadBlockAndGetBufferPtr(unsigned char **buffPtr)
 {
 	//check if the block is alr present in buffer, so we just return the num
 	int bufferNum = StaticBuffer :: getBufferNum(this->blockNum);
-	if (bufferNum == E_BLOCKNOTINBUFFER) //if not present, we assign one
+
+	if (bufferNum != E_BLOCKNOTINBUFFER)
+	{
+		for (int i=0 ; i<BUFFER_CAPACITY; i++)
+		{
+			if (i == bufferNum)
+			{
+				StaticBuffer::metainfo[i].timeStamp=0;
+			}
+			else
+			{
+				StaticBuffer::metainfo[i].timeStamp+=1;
+			}
+		}
+	}
+	else
 	{
 		bufferNum = StaticBuffer :: getFreeBuffer(this->blockNum);
 		if (bufferNum == E_OUTOFBOUND)
@@ -134,4 +152,42 @@ int compareAttrs(union Attribute attr1, union Attribute attr2, int attrType)
 		return -1;
 	}
 	return 0;
+}
+
+
+int RecBuffer::setRecord(union Attribute *rec, int slotNum)
+{
+	unsigned char* bufferPtr;
+	int res = BlockBuffer::loadBlockAndGetBufferPtr(&bufferPtr);
+
+	if (res != SUCCESS)
+	{
+		return res;
+	}
+
+
+	//get header of the block
+	struct HeadInfo head;
+	this->getHeader(&head);
+
+	//get number of attributes
+	int attrCount = head.numAttrs;
+
+	//get slot count
+	int slotCount = head.numSlots;
+
+	//if input slot num is out of range
+	if (slotNum >= slotCount)
+	{
+		return E_OUTOFBOUND;
+	}
+
+	int recordSize = attrCount*16;
+	unsigned char* slotPointer = bufferPtr + HEADER_SIZE + slotCount + slotNum * recordSize;
+	memcpy(slotPointer, rec, recordSize);
+
+	// update the dirty bit using setDirtyBit()
+    StaticBuffer::setDirtyBit(this->blockNum);
+
+    return SUCCESS;
 }
