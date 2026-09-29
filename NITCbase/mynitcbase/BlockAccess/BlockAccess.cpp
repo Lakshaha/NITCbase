@@ -41,9 +41,7 @@ RecId BlockAccess::linearSearch(int relId, char attrName[ATTR_SIZE], union Attri
 		recBuffer.getSlotMap(slotMap);
 		
 		//getting thr record
-		Attribute record[head.numAttrs];
-		recBuffer.getRecord(record, slot);
-
+		
 		if (slot >= head.numSlots)
 		{
 			block = head.rblock;
@@ -57,6 +55,10 @@ RecId BlockAccess::linearSearch(int relId, char attrName[ATTR_SIZE], union Attri
 			slot++;
 			continue;
 		}
+
+		Attribute record[head.numAttrs];
+		recBuffer.getRecord(record, slot);
+	
 
 		//compare record attribute value
 		AttrCatEntry attrCatEntry;
@@ -100,10 +102,11 @@ int BlockAccess::renameRelation(char oldName[ATTR_SIZE], char newName[ATTR_SIZE]
 	Attribute newRelationName;
 	strcpy(newRelationName.sVal, newName); // set newRelationName with newName
 
-	char *relCatAttrRelName;
-	strcpy(relCatAttrRelName, RELCAT_ATTR_RELNAME);
-	//if the new name already exists
-	RecId recId = BlockAccess::linearSearch(RELCAT_RELID, relCatAttrRelName, newRelationName,EQ);
+	// char *relCatAttrRelName;
+	// // relCatAttrRelName = RELCAT_ATTR_RELNAME;
+	// strcpy(relCatAttrRelName, RELCAT_ATTR_RELNAME);
+	// //if the new name already exists
+	RecId recId = BlockAccess:linearSearch(RELCAT_RELID, RELCAT_ATTR_RELNAME, newRelationName,EQ);
 
 	if (recId.block != -1 && recId.slot != -1)
 	{
@@ -116,9 +119,9 @@ int BlockAccess::renameRelation(char oldName[ATTR_SIZE], char newName[ATTR_SIZE]
 	strcpy(oldRelationName.sVal, oldName);
 
 	//search for the old relation id
-	recId = BlockAccess::linearSearch(RELCAT_RELID, relCatAttrRelName, oldRelationName, EQ);
+	RecId old_recId = BlockAccess::linearSearch(RELCAT_RELID, RELCAT_ATTR_RELNAME, oldRelationName, EQ);
 
-	if (recId.block == -1 && recId.slot == -1)
+	if (old_recId.block == -1 && old_recId.slot == -1)
 	{
 		return E_RELNOTEXIST;
 	}
@@ -131,26 +134,26 @@ int BlockAccess::renameRelation(char oldName[ATTR_SIZE], char newName[ATTR_SIZE]
 
     Attribute record[RELCAT_NO_ATTRS];
     RecBuffer recBuffer(RELCAT_BLOCK);
-    recBuffer.getRecord(record, recId.slot);
+    recBuffer.getRecord(record, old_recId.slot);
+    record[RELCAT_REL_NAME_INDEX] = newRelationName;
+    recBuffer.setRecord(record, old_recId.slot);
 
 	//update the relation name attribute w new relname
-	strcpy(record[RELCAT_REL_NAME_INDEX].sVal, newName);
-	recBuffer.setRecord(record, recId.slot);
+	// strcpy(record[RELCAT_REL_NAME_INDEX].sVal, newName);
+	// recBuffer.setRecord(record, recId.slot);
 
 	//update all attribute catalog entries
 	RelCacheTable::resetSearchIndex(ATTRCAT_RELID);
-	int numAttrs = record[RELCAT_REL_NAME_INDEX].nVal;
-	char *attrCatAttrRelName;
-	strcpy(attrCatAttrRelName, ATTRCAT_ATTR_RELNAME);
+	int numAttrs = record[RELCAT_NO_ATTRIBUTES_INDEX].nVal;
 	for (int i=0; i<numAttrs; i++)
 	{
-		RecId rec_id = BlockAccess::linearSearch(ATTRCAT_RELID, attrCatAttrRelName, oldRelationName, EQ);
+		RecId curr = BlockAccess::linearSearch(ATTRCAT_RELID, ATTRCAT_ATTR_RELNAME, oldRelationName, EQ);
 		Attribute attrRecord[ATTRCAT_NO_ATTRS];
-		RecBuffer attrBuffer(recId.block);
-		attrBuffer.getRecord(attrRecord, rec_id.slot);
+		RecBuffer attrBuffer(curr.block);
+		attrBuffer.getRecord(attrRecord, curr.slot);
 
         attrRecord[ATTRCAT_REL_NAME_INDEX] = newRelationName;
-        attrBuffer.setRecord(attrRecord, rec_id.slot);
+        attrBuffer.setRecord(attrRecord, curr.slot);
 	}
 	return SUCCESS;
 	
@@ -164,11 +167,7 @@ int BlockAccess::renameAttribute(char relName[ATTR_SIZE], char oldName[ATTR_SIZE
 
 	Attribute relNameAttr;
 	strcpy(relNameAttr.sVal, relName);
-
-	char *relCatAttrRelName;
-	strcpy(relCatAttrRelName, RELCAT_ATTR_RELNAME);
-
-	RecId recId = BlockAccess::linearSearch(RELCAT_RELID, relCatAttrRelName, relNameAttr, EQ);
+	RecId recId = BlockAccess::linearSearch(RELCAT_RELID, RELCAT_ATTR_RELNAME, relNameAttr, EQ);
 	if (recId.block == -1 && recId.slot == -1)
 	{
 		return E_RELNOTEXIST;
@@ -184,13 +183,11 @@ int BlockAccess::renameAttribute(char relName[ATTR_SIZE], char oldName[ATTR_SIZE
     relation to find the required attribute */
     // if found check if attrName == oldAttrName, replace then
 
-    char *attrCatAttrRelName;
-    strcpy(attrCatAttrRelName, ATTRCAT_ATTR_RELNAME);
-
+   
     while (true)
     {
     	//linear search using relName
-    	RecId rec_id = BlockAccess::linearSearch(ATTRCAT_RELID, attrCatAttrRelName, relNameAttr, EQ);
+    	RecId rec_id = BlockAccess::linearSearch(ATTRCAT_RELID, ATTRCAT_ATTR_RELNAME, relNameAttr, EQ);
 
 		if (rec_id.block == -1 && rec_id.slot == -1)
 		{

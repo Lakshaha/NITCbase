@@ -37,6 +37,18 @@ int BlockBuffer::getHeader(struct HeadInfo* head) //tells its block buffer class
 int RecBuffer :: getRecord(union Attribute *rec, int slotNum)
 {
 
+	struct HeadInfo head;
+	this->getHeader(&head);
+
+	int attrCount = head.numAttrs;
+	int slotCount = head.numSlots;
+
+	if (slotNum < 0 || slotNum >= head.numSlots)
+	{
+	    return E_OUTOFBOUND;
+	}
+    
+
 	unsigned char* bufferPtr;
 	int ret = loadBlockAndGetBufferPtr(&bufferPtr);
 	if (ret != SUCCESS)
@@ -44,12 +56,7 @@ int RecBuffer :: getRecord(union Attribute *rec, int slotNum)
 		return ret;
 	}
 	
-	struct HeadInfo head;
-	this->getHeader(&head);
 
-	int attrCount = head.numAttrs;
-	int slotCount = head.numSlots;
-    
 	int recordSize = attrCount * ATTR_SIZE; //attrSize is 16
 	int offset = HEADER_SIZE + head.numSlots + (recordSize * slotNum);
 	unsigned char *slotPointer = bufferPtr + offset;
@@ -70,6 +77,10 @@ int BlockBuffer :: loadBlockAndGetBufferPtr(unsigned char **buffPtr)
 
 	if (bufferNum != E_BLOCKNOTINBUFFER)
 	{
+		if (bufferNum == E_OUTOFBOUND)
+		{
+			return E_OUTOFBOUND;
+		}
 		for (int i=0 ; i<BUFFER_CAPACITY; i++)
 		{
 			if (i == bufferNum)
@@ -177,7 +188,7 @@ int RecBuffer::setRecord(union Attribute *rec, int slotNum)
 	int slotCount = head.numSlots;
 
 	//if input slot num is out of range
-	if (slotNum >= slotCount)
+	if (slotNum < 0 ||slotNum >= slotCount)
 	{
 		return E_OUTOFBOUND;
 	}
@@ -187,7 +198,11 @@ int RecBuffer::setRecord(union Attribute *rec, int slotNum)
 	memcpy(slotPointer, rec, recordSize);
 
 	// update the dirty bit using setDirtyBit()
-    StaticBuffer::setDirtyBit(this->blockNum);
+    int retVal = StaticBuffer::setDirtyBit(this->blockNum);
 
+    if (retVal != SUCCESS)
+    {
+    	return retVal;
+    }
     return SUCCESS;
 }

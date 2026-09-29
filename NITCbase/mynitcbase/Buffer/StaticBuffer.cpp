@@ -38,7 +38,7 @@ StaticBuffer :: ~StaticBuffer()
 //
 int StaticBuffer::getFreeBuffer(int blockNum)
 {
-	if (blockNum < 0 || blockNum > DISK_BLOCKS) //if its a valid block num
+	if (blockNum < 0 || blockNum >= DISK_BLOCKS) //if its a valid block num
 	{
 		return E_OUTOFBOUND;
 	}
@@ -46,32 +46,39 @@ int StaticBuffer::getFreeBuffer(int blockNum)
 
 	// increase the timeStamp in metaInfo of all occupied buffers.
     // let bufferNum be used to store the buffer number of the free/freed buffer.
-	int bufferNum=-1, bufferWithMaxTime=-1, maxTimeStamp=0;
+	int bufferNum=-1, bufferWithMaxTime=-1, maxTimeStamp=-1;
 	for (int i=0; i<BUFFER_CAPACITY; i++)
 	{
 		if (!metainfo[i].free)
 		{
-			metainfo[i].timeStamp+=1;
-
-			if (maxTimeStamp < metainfo[i].timeStamp)
-			{
-				bufferWithMaxTime = i;
-				maxTimeStamp = metainfo[i].timeStamp;
-			}
-		}
-		if (metainfo[i].free && bufferNum == -1)
-		{
-			bufferNum = i;
+			metainfo[i].timeStamp++;
 		}
 	}
 
+	for (int i=0; i<BUFFER_CAPACITY; i++)
+	{
+		if (metainfo[i].free && bufferNum == -1)
+		{
+			bufferNum = i;
+			break;
+		}
+ 	}
+
 	if (bufferNum == -1)
 	{
-		if (metainfo[bufferWithMaxTime].dirty)
+		maxTimeStamp = -1;
+		for (int i=0; i<BUFFER_CAPACITY; i++)
 		{
-			Disk::writeBlock(StaticBuffer::blocks[bufferWithMaxTime], metainfo[bufferWithMaxTime].blockNum);
+			if (maxTimeStamp < metainfo[i].timeStamp)
+			{
+				bufferNum = i;
+				maxTimeStamp = metainfo[i].timeStamp;
+			}
 		}
-		bufferNum = bufferWithMaxTime;
+		if (metainfo[bufferNum].dirty)
+		{
+			Disk::writeBlock(StaticBuffer::blocks[bufferNum], metainfo[bufferNum].blockNum);
+		}
 	}
 	
 
@@ -85,7 +92,7 @@ int StaticBuffer::getFreeBuffer(int blockNum)
 
 int StaticBuffer::getBufferNum(int blockNum)
 {
-	if (blockNum < 0 || blockNum > DISK_BLOCKS)
+	if (blockNum < 0 || blockNum >= DISK_BLOCKS)
 	{
 		return E_OUTOFBOUND;
 	}
