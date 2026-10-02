@@ -4,9 +4,18 @@
 unsigned char StaticBuffer :: blocks[BUFFER_CAPACITY][BLOCK_SIZE];
 struct BufferMetaInfo StaticBuffer :: metainfo[BUFFER_CAPACITY];
 
+// _______stage-7_________________________
+unsigned char StaticBuffer::blockAllocMap[DISK_BLOCKS];
+
 StaticBuffer :: StaticBuffer() //constructor
 {	
+	//stage-7
+	for (int i=0; i<4; i++)
+	{
+		Disk::readBlock(blockAllocMap + i*BLOCK_SIZE, i);
+	}
 	//initialise all the blocks free
+	//stage-6
 	for (int i=0; i<BUFFER_CAPACITY; i++)
 	{
 		metainfo[i].free = true;
@@ -18,11 +27,18 @@ StaticBuffer :: StaticBuffer() //constructor
 
 StaticBuffer :: ~StaticBuffer()
 {
+
+	for (int i=0; i<4; i++)
+	{
+		Disk::writeBlock(blockAllocMap + i*BLOCK_SIZE, i);
+	}
+
 /*	
 	iterate through all the buffer blocks,
     write back blocks with metainfo as free=false,dirty=true
     using Disk::writeBlock()
 */
+
 	for (int i=0; i<BUFFER_CAPACITY; i++)
 	{
 		if (!metainfo[i].free && metainfo[i].dirty)
@@ -127,3 +143,5 @@ int StaticBuffer::setDirtyBit(int blockNum)
 	return SUCCESS;
 	
 }
+
+

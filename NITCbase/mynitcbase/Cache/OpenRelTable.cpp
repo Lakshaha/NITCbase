@@ -306,12 +306,36 @@ int OpenRelTable::closeRel(int relId)
 	{
 		return E_RELNOTOPEN;
 	}
+    
+    //releasing relation cache entry of relation
 
+    //if the relcat entry is been modified
+    if (RelCacheTable::relCache[relId]->dirty)
+    {
+        //get the relcat entry and convert to record
+        Attribute relCatRecord[RELCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&RelCacheTable::relCache[relId]->relCatEntry, relCatRecord);
+
+        //declare an object of recbuffer to write back
+        RecBuffer relCatBlock(RelCacheTable::relCache[relId]->recId.block);
+
+        //use set record and update slot
+        relCatBlock.setRecord(relCatRecord, RelCacheTable::relCache[relId]->recId.slot);
+    }
+
+    //releasing attribute cache entry of relation
 	free(RelCacheTable::relCache[relId]);
 	AttrCacheEntry *entry, *temp;
 	entry = AttrCacheTable::attrCache[relId];
 	while (entry != nullptr)
 	{
+        if (entry->dirty)
+        {
+            Attribute record[ATTRCAT_NO_ATTRS];
+            AttrCacheTable::attrCatEntryToRecord(&entry->attrCatEntry, record);
+            RecBuffer attrCatBlock(entry->recId.block);
+            attrCatBlock.setRecord(record, entry->recId.slot);
+        }
 		temp = entry;
 		entry = entry->next;
 		free(temp);
