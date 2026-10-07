@@ -314,14 +314,12 @@ int BlockBuffer::getFreeBlock(int blockType)
 	return freeBlock;
 }
 
-
 RecBuffer::RecBuffer() : BlockBuffer('R'){}
 
 int BlockBuffer::getBlockNum()
 {
 	return this->blockNum;
 }
-
 
 int RecBuffer::setSlotMap(unsigned char *slotMap)
 {
@@ -346,4 +344,20 @@ int RecBuffer::setSlotMap(unsigned char *slotMap)
 
 	ret = StaticBuffer::setDirtyBit(this->blockNum);
 	return ret;
+}
+
+void BlockBuffer::releaseBlock()
+{
+	//only do if the blockNum is not invalid
+	if (this->blockNum != INVALID_BLOCKNUM)
+	{
+		int bufferNum = StaticBuffer::getBufferNum(this->blockNum);
+		//return E_blocknotinbuffer if not preset
+		if (bufferNum != E_BLOCKNOTINBUFFER)
+		{
+			StaticBuffer::metainfo[bufferNum].free = true;
+			StaticBuffer::blockAllocMap[this->blockNum] = UNUSED_BLK;
+		}
+		this->blockNum = INVALID_BLOCKNUM;
+	}
 }

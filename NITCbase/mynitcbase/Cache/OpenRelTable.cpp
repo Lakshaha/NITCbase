@@ -147,33 +147,33 @@ OpenRelTable:: OpenRelTable() {
 }
 
 
-OpenRelTable::~OpenRelTable(){
+// OpenRelTable::~OpenRelTable(){
 
-	for (int i=0; i<MAX_OPEN; i++)
-	{
-		if (!tableMetaInfo[i].free)
-		{
-			OpenRelTable::closeRel(i);
-		}
-	}
+// 	for (int i=0; i<MAX_OPEN; i++)
+// 	{
+// 		if (!tableMetaInfo[i].free)
+// 		{
+// 			OpenRelTable::closeRel(i);
+// 		}
+// 	}
 	
-    // free all the memories that is allocted in the constructor
-    for(int i = 0; i<MAX_OPEN; i++){
-        if(RelCacheTable::relCache[i] != nullptr){
-            free(RelCacheTable::relCache[i]);
-            RelCacheTable::relCache[i] = nullptr;
-        }
-        if(AttrCacheTable::attrCache[i] != nullptr){
-            struct AttrCacheEntry* attrCacheEntry = AttrCacheTable::attrCache[i];
-            while(attrCacheEntry != nullptr){
-                struct AttrCacheEntry* tempCacheEntry = attrCacheEntry;
-                attrCacheEntry = attrCacheEntry->next;
-                free(tempCacheEntry);
-            }
-            AttrCacheTable::attrCache[i] = nullptr;
-        }
-    }
-}
+//     // free all the memories that is allocted in the constructor
+//     for(int i = 0; i<MAX_OPEN; i++){
+//         if(RelCacheTable::relCache[i] != nullptr){
+//             free(RelCacheTable::relCache[i]);
+//             RelCacheTable::relCache[i] = nullptr;
+//         }
+//         if(AttrCacheTable::attrCache[i] != nullptr){
+//             struct AttrCacheEntry* attrCacheEntry = AttrCacheTable::attrCache[i];
+//             while(attrCacheEntry != nullptr){
+//                 struct AttrCacheEntry* tempCacheEntry = attrCacheEntry;
+//                 attrCacheEntry = attrCacheEntry->next;
+//                 free(tempCacheEntry);
+//             }
+//             AttrCacheTable::attrCache[i] = nullptr;
+//         }
+//     }
+// }
 
 //Get Free Open Rel Table Entry
 //return index of unoccupied entry in open relation table
@@ -349,4 +349,57 @@ int OpenRelTable::closeRel(int relId)
     return SUCCESS;
 }
 	
-	
+
+// __________Stage-8___________________________
+OpenRelTable::~OpenRelTable()
+{
+    for (int i=2; i<MAX_OPEN; i++)
+    {
+        if (!tableMetaInfo[i].free)
+        {
+            //close relation if open
+            OpenRelTable::closeRel(i);
+        }
+    }
+
+    //closing the catalog relation in relation cache
+    if (RelCacheTable::relCache[ATTRCAT_RELID]->dirty)
+    {
+        //get relcat entry, convert to record
+        RelCatEntry relCatEntry = RelCacheTable::relCache[ATTRCAT_RELID]->relCatEntry;
+        Attribute relCatRecord[ATTRCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&relCatEntry, relCatRecord);
+        //declaring recbuffer to write it back
+        RecBuffer relCatBlock(RelCacheTable::relCache[ATTRCAT_RELID]->recId.block);
+        relCatBlock.setRecord(relCatRecord, RelCacheTable::relCache[ATTRCAT_RELID]->recId.slot);
+    }
+    //free dynamically the memory allocated
+    free(RelCacheTable::relCache[ATTRCAT_RELID]);
+
+
+    //releasing the relation cache entry of relation catalog
+    if (RelCacheTable::relCache[RELCAT_RELID]->dirty)
+    {
+        RelCatEntry relCatEntry = RelCacheTable::relCache[RELCAT_RELID]->relCatEntry;
+        Attribute relCatRecord[RELCAT_NO_ATTRS];
+        RelCacheTable::relCatEntryToRecord(&relCatEntry, relCatRecord);
+        //declaring recbuffer to write it back
+        RecBuffer relCatBlock(RelCacheTable::relCache[RELCAT_RELID]->recId.block);
+        relCatBlock.setRecord(relCatRecord, RelCacheTable::relCache[RELCAT_RELID]->recId.slot);    
+    }
+    //free memory dynamically
+    free(RelCacheTable::relCache[RELCAT_RELID]);
+
+    //free the memory of attribute cach, they are never changed cuz the attributes of relcat and attr cat are never changed
+    for (int i=0; i<2; i++)
+    {
+        struct AttrCacheEntry *entry = AttrCacheTable::attrCache[i];
+        while (entry!=nullptr)
+        {
+            struct AttrCacheEntry *temp = entry;
+            entry = entry->next;
+            free(temp);
+        }
+        
+    }
+}
