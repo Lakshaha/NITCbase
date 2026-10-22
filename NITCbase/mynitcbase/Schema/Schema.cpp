@@ -78,8 +78,9 @@ int Schema::createRel(char relName[],int nAttrs, char attrs[][ATTR_SIZE],int att
 	
 	//reset search index
 	RelCacheTable::resetSearchIndex(RELCAT_RELID);
+	char relCatAttrRelname[ATTR_SIZE] = RELCAT_ATTR_RELNAME;
 	//search relation catalog for relNameAsAttribute value
-	targetRelId = BlockAccess::linearSearch(RELCAT_RELID, relName, relNameAsAttribute, EQ);
+	targetRelId = BlockAccess::linearSearch(RELCAT_RELID, relCatAttrRelname, relNameAsAttribute, EQ);
 	//if relation with same relName already exists
 	if (targetRelId.block != -1 && targetRelId.slot != -1)
 	{
