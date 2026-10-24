@@ -583,49 +583,116 @@ int BlockAccess::deleteRelation(char relName[ATTR_SIZE])
 
 
 // __________Stage-9__________________________________
+// int BlockAccess::project(int relId, Attribute *record)
+// {
+//     //get prev search index fof relation relId from the relation
+//     RecId prevRecId;
+//     RelCacheTable::getSearchIndex(relId, &prevRecId);
+
+//     //declare block and slot to store the record id
+//     int block, slot;
+
+//     //if current search index is -1,-1, caller has to call reset
+//     if (prevRecId.block == -1 && prevRecId.slot==-1)
+//     {
+//         RelCatEntry relCatEntry;
+//         int ret = RelCacheTable::getRelCatEntry(relId, &relCatEntry);
+//         if (ret != SUCCESS)
+//         {
+//             return ret;
+//         }
+//         int firstBlk = relCatEntry.firstBlk;
+//         block = firstBlk;
+//         slot = 0;
+//     }
+//     else
+//     {
+//         block = prevRecId.block;
+//         slot = prevRecId.slot+1;
+//     }
+//     while(block != -1)
+//     {
+//         RecBuffer recBuffer(block);
+
+//         //get header
+//         struct HeadInfo head;
+//         recBuffer.getHeader(&head);
+//         //get slot size
+//         int numSlot = head.numSlots;
+//         unsigned char slotMap[numSlot];
+//         recBuffer.getSlotMap(slotMap);
+
+//         //check if slot >= numslot
+//         if (slot >= numSlot)
+//         {
+//             //no more slot in this block
+//             block = head.rblock;
+//             slot = 0;
+//         }
+//         else if (slotMap[slot] == SLOT_UNOCCUPIED)
+//         {
+//             slot++;
+//         }
+//         else
+//         {
+//             //the next occupied slot has been found
+//             break;
+//         }
+//     }
+//     if (block == -1)
+//     {
+//         return E_NOTFOUND;
+//     }
+
+//     RecId nextRecId{block,slot};
+//     RelCacheTable::setSearchIndex(relId, &nextRecId);
+
+//     RecBuffer recBuffer(nextRecId.block);
+//     recBuffer.getRecord(record, nextRecId.slot);
+
+//     return SUCCESS;
+// }
+
 int BlockAccess::project(int relId, Attribute *record)
 {
-    //get prev search index fof relation relId from the relation
     RecId prevRecId;
     RelCacheTable::getSearchIndex(relId, &prevRecId);
 
-    //declare block and slot to store the record id
     int block, slot;
 
-    //if current search index is -1,-1, caller has to call reset
-    if (prevRecId.block == -1 && prevRecId.slot==-1)
+    if (prevRecId.block == -1 && prevRecId.slot == -1)
     {
         RelCatEntry relCatEntry;
-        int ret = RelCacheTable::getRelCatEntry(relId, &relCatEntry);
+
+        int ret = RelCacheTable::getRelCatEntry(
+            relId,
+            &relCatEntry
+        );
+
         if (ret != SUCCESS)
-        {
             return ret;
-        }
-        int firstBlk = relCatEntry.firstBlk;
-        block = firstBlk;
+
+        block = relCatEntry.firstBlk;
         slot = 0;
     }
     else
     {
         block = prevRecId.block;
-        slot = prevRecId.slot+1;
+        slot = prevRecId.slot + 1;
     }
-    while(block != -1)
+
+    while (block != -1)
     {
         RecBuffer recBuffer(block);
 
-        //get header
-        struct HeadInfo head;
+        HeadInfo head;
         recBuffer.getHeader(&head);
-        //get slot size
-        int numSlot = head.numSlots;
-        unsigned char slotMap[numSlot];
+
+        unsigned char slotMap[head.numSlots];
         recBuffer.getSlotMap(slotMap);
 
-        //check if slot >= numslot
-        if (slot >= numSlot)
+        if (slot >= head.numSlots)
         {
-            //no more slot in this block
             block = head.rblock;
             slot = 0;
         }
@@ -635,16 +702,15 @@ int BlockAccess::project(int relId, Attribute *record)
         }
         else
         {
-            //the next occupied slot has been found
             break;
         }
     }
-    if (block == -1)
-    {
-        return E_NOTFOUND;
-    }
 
-    RecId nextRecId{block,slot};
+    if (block == -1)
+        return E_NOTFOUND;
+
+    RecId nextRecId = {block, slot};
+
     RelCacheTable::setSearchIndex(relId, &nextRecId);
 
     RecBuffer recBuffer(nextRecId.block);
