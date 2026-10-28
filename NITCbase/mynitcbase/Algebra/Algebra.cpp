@@ -113,111 +113,88 @@ the arguments of the function are
 // }
 
 
-int Algebra::select(char srcRel[ATTR_SIZE],
-                    char targetRel[ATTR_SIZE],
-                    char attr[ATTR_SIZE],
-                    int op,
-                    char strVal[ATTR_SIZE])
-{
+int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr[ATTR_SIZE], int op, char strVal[ATTR_SIZE]){
     int srcRelId = OpenRelTable::getRelId(srcRel);
-
-    if (srcRelId == E_RELNOTOPEN)
-    {
+    if(srcRelId == E_RELNOTOPEN){
         return E_RELNOTOPEN;
     }
 
     AttrCatEntry attrCatEntry;
-
-    int ret = AttrCacheTable::getAttrCatEntry(
-        srcRelId, attr, &attrCatEntry
-    );
-
-    if (ret == E_ATTRNOTEXIST)
-    {
-        return E_ATTRNOTEXIST;
-    }
-
-    Attribute attrValue;
+    // get the attribute catalog entry for attr, using AttrCacheTable::getAttrcatEntry()
+    //    return E_ATTRNOTEXIST if it returns the error
+    int ret = AttrCacheTable::getAttrCatEntry(srcRelId, attr, &attrCatEntry);
+	if (ret == E_ATTRNOTEXIST) {
+		return E_ATTRNOTEXIST;
+	}
+    
+    /*** Convert input strVal (string) to an attribute of data type NUMBER or STRING ***/
     int type = attrCatEntry.attrType;
-
-    if (type == NUMBER)
-    {
-        if (isNumber(strVal))
-        {
+    Attribute attrValue;
+    if(type == NUMBER){
+        if(isNumber(strVal)){
             attrValue.nVal = atof(strVal);
         }
-        else
-        {
+        else{
             return E_ATTRTYPEMISMATCH;
         }
     }
-    else if (type == STRING)
-    {
+    else if( type == STRING){
         strcpy(attrValue.sVal, strVal);
     }
 
+    /*** Creating and opening the target relation ***/
+    // prepare arguments for createRel() in the following way:
+    // get RelcatEntry of srcRel using
     RelCatEntry relCatEntry;
     RelCacheTable::getRelCatEntry(srcRelId, &relCatEntry);
-
     int src_nAttrs = relCatEntry.numAttrs;
 
+    // store all the attributes names of secRel in 2D array, and attribute type in 1d array.
     char attr_names[src_nAttrs][ATTR_SIZE];
     int attr_type[src_nAttrs];
 
-    for (int i = 0; i < src_nAttrs; i++)
-    {
+    for(int i = 0; i < src_nAttrs; i++){
         AttrCatEntry srcAttrCatEntry;
-
-        AttrCacheTable::getAttrCatEntry(
-            srcRelId, i, &srcAttrCatEntry
-        );
-
-        strcpy(attr_names[i], srcAttrCatEntry.attrName);
+        AttrCacheTable::getAttrCatEntry(srcRelId, i, &srcAttrCatEntry);
+        strcpy(attr_names[i],srcAttrCatEntry.attrName);
         attr_type[i] = srcAttrCatEntry.attrType;
     }
 
-    int retVal = Schema::createRel(
-        targetRel, src_nAttrs, attr_names, attr_type
-    );
+    // Create the relation for target relation by calling Schema::createRel()
+    int retVal = Schema::createRel(targetRel, src_nAttrs, attr_names, attr_type);
 
-    if (retVal != SUCCESS)
-    {
+    // little bit of error handling
+    if(retVal != SUCCESS){
+        Schema::deleteRel(targetRel);
         return retVal;
     }
 
     int targetRelId = OpenRelTable::openRel(targetRel);
-
-    if (targetRelId < 0)
-    {
-        Schema::deleteRel(targetRel);
+    if(targetRelId < 0) {
+        // Schema::deleteRel(targetRel);
         return targetRelId;
     }
 
+    /*** Selecting and inserting records into the target relation ***/
+    // Reset searchIndex for attrCacheTable [not required for this stage]
+
     Attribute record[src_nAttrs];
-
     RelCacheTable::resetSearchIndex(srcRelId);
-    //AttrCacheTable::resetSearchIndex(srcRelId, attr);
+    AttrCacheTable::resetSearchIndex(srcRelId,attr);
 
-    while (BlockAccess::search(
-               srcRelId, record, attr, attrValue, op
-           ) == SUCCESS)
-    {
-        int insertRet = BlockAccess::insert(
-            targetRelId, record
-        );
-
-        if (insertRet != SUCCESS)
-        {
+    while(BlockAccess::search(srcRelId, record, attr, attrValue, op) == SUCCESS){
+        int ret = BlockAccess::insert(targetRelId, record);
+        if(ret != SUCCESS){
             Schema::closeRel(targetRel);
             Schema::deleteRel(targetRel);
-            return insertRet;
+            return ret;
         }
     }
-
     Schema::closeRel(targetRel);
-
+    // Schema::deleteRel(targetRel);
     return SUCCESS;
 }
+
 
 
 
@@ -593,3 +570,5 @@ int Algebra::project(char srcRel[ATTR_SIZE],
 
     return SUCCESS;
 }
+
+

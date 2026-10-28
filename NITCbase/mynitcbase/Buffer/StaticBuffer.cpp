@@ -144,4 +144,16 @@ int StaticBuffer::setDirtyBit(int blockNum)
 	
 }
 
+// _____________Stage-10____________________________________________
 
+int StaticBuffer::getStaticBlockType(int blockNum){
+    if(blockNum < 0 || blockNum >= DISK_BLOCKS){
+        return E_OUTOFBOUND;
+    }
+
+    /*
+        Access the entry in block allocation map corresponding to the blockNum argument
+        and return the block type after type casting to integer
+    */
+    return (int)blockAllocMap[blockNum];
+}

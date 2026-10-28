@@ -424,19 +424,19 @@ int BlockAccess::insert(int relId, Attribute *record)
     return SUCCESS;
 }
 
-int BlockAccess::search(int relId, Attribute *record, char attrName[ATTR_SIZE], Attribute attrVal, int op)
-{
-    //declare variable to seach records
-    RecId recId;
-    recId = BlockAccess::linearSearch(relId, attrName, attrVal, op);
-    if (recId.block == -1 && recId.slot == -1)
-    {
-        return E_NOTFOUND;
-    }
-    RecBuffer recBuffer(recId.block);
-    recBuffer.getRecord(record, recId.slot);
-    return SUCCESS;
-}
+// int BlockAccess::search(int relId, Attribute *record, char attrName[ATTR_SIZE], Attribute attrVal, int op)
+// {
+//     //declare variable to seach records
+//     RecId recId;
+//     recId = BlockAccess::linearSearch(relId, attrName, attrVal, op);
+//     if (recId.block == -1 && recId.slot == -1)
+//     {
+//         return E_NOTFOUND;
+//     }
+//     RecBuffer recBuffer(recId.block);
+//     recBuffer.getRecord(record, recId.slot);
+//     return SUCCESS;
+// }
 
 int BlockAccess::deleteRelation(char relName[ATTR_SIZE])
 {
@@ -715,6 +715,42 @@ int BlockAccess::project(int relId, Attribute *record)
 
     RecBuffer recBuffer(nextRecId.block);
     recBuffer.getRecord(record, nextRecId.slot);
+
+    return SUCCESS;
+}
+
+// ___________________Stage-10_______________________________________
+
+int BlockAccess::search(int relId, Attribute *record, char attrName[ATTR_SIZE], Attribute attrVal, int op){
+   
+    RecId recId;
+
+    AttrCatEntry attrCatEntry;
+    int ret = AttrCacheTable::getAttrCatEntry(relId, attrName, &attrCatEntry);
+    if(ret != SUCCESS){
+        return ret;     // Error handling
+    }
+
+    int rootBlock = attrCatEntry.rootBlock;
+    
+    if(rootBlock == -1){
+        recId = BlockAccess::linearSearch(relId, attrName, attrVal, op);
+    }
+    else{
+        recId = BPlusTree::bPlusSearch(relId, attrName, attrVal, op);
+    }
+
+
+    // if record not found return E_NOTFOUND
+    if(recId.block == -1 && recId.slot == -1){
+        return E_NOTFOUND;
+    }
+
+    /*
+        Copy the record with recId to the record buffer (record)
+    */
+    RecBuffer recBuffer(recId.block);
+    recBuffer.getRecord(record,recId.slot); //content of that record will be stored in argument record
 
     return SUCCESS;
 }
