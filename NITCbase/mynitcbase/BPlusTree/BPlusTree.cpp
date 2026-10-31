@@ -2,6 +2,7 @@
 
 #include <cstring>
 
+int bPlusComparison;
 
 RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE], Attribute attrVal, int op){
     
@@ -43,7 +44,7 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE], Attribute attr
         // declare leafHead which will store the header of the leaf. Load the header
         HeadInfo leafHead;
         leaf.getHeader(&leafHead);
-
+        bPlusComparison++;
         // if the index is more than the no. of entries, search in the next leaf
         if(index >= leafHead.numEntries){
             block = leafHead.rblock;

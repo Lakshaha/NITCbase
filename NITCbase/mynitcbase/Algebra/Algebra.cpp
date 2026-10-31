@@ -113,6 +113,10 @@ the arguments of the function are
 // }
 
 
+extern int linearComparison;
+extern int bPlusComparison;
+
+
 int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr[ATTR_SIZE], int op, char strVal[ATTR_SIZE]){
     int srcRelId = OpenRelTable::getRelId(srcRel);
     if(srcRelId == E_RELNOTOPEN){
@@ -182,6 +186,9 @@ int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr
     RelCacheTable::resetSearchIndex(srcRelId);
     AttrCacheTable::resetSearchIndex(srcRelId,attr);
 
+    linearComparison = 0;
+    bPlusComparison = 0;
+
     while(BlockAccess::search(srcRelId, record, attr, attrValue, op) == SUCCESS){
         int ret = BlockAccess::insert(targetRelId, record);
         if(ret != SUCCESS){
@@ -190,6 +197,9 @@ int Algebra::select(char srcRel[ATTR_SIZE], char targetRel[ATTR_SIZE], char attr
             return ret;
         }
     }
+    printf("Linear Comparison: %d\n",linearComparison);
+    printf("B Plus Comparison: %d\n",bPlusComparison);
+
     Schema::closeRel(targetRel);
     // Schema::deleteRel(targetRel);
     return SUCCESS;
