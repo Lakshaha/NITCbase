@@ -1,0 +1,64 @@
+void BPlusTree::printTree(
+    int rootBlock,
+    int relId,
+    char attrName[ATTR_SIZE]
+) {
+    int type = StaticBuffer::getStaticBlockType(rootBlock);
+
+    AttrCatEntry attrCatEntry;
+
+    if (AttrCacheTable::getAttrCatEntry(
+            relId, attrName, &attrCatEntry) != SUCCESS) {
+        return;
+    }
+
+    int rootBlockNum = attrCatEntry.rootBlock;
+
+    if (rootBlock == rootBlockNum) {
+        cout << "Root Block: " << rootBlock << endl;
+    }
+    else if (type == IND_LEAF) {
+        cout << "Leaf Block: " << rootBlock << endl;
+    }
+    else if (type == IND_INTERNAL) {
+        cout << "Internal Block: " << rootBlock << endl;
+    }
+    else {
+        return;
+    }
+
+    if (type == IND_LEAF) {
+        return;
+    }
+
+    IndInternal internalBlock(rootBlock);
+
+    HeadInfo blockHeader;
+
+    if (internalBlock.getHeader(&blockHeader) != SUCCESS) {
+        return;
+    }
+
+    if (blockHeader.numEntries == 0) {
+        return;
+    }
+
+    InternalEntry blockEntry;
+
+    if (internalBlock.getEntry(&blockEntry, 0) != SUCCESS) {
+        return;
+    }
+
+    printTree(blockEntry.lChild, relId, attrName);
+
+    for (int entry = 0;
+         entry < blockHeader.numEntries;
+         entry++) {
+
+        if (internalBlock.getEntry(&blockEntry, entry) != SUCCESS) {
+            return;
+        }
+
+        printTree(blockEntry.rChild, relId, attrName);
+    }
+}

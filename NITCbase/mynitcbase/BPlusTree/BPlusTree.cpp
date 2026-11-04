@@ -1,6 +1,9 @@
 #include "BPlusTree.h"
 
 #include <cstring>
+#include <vector>
+#include <iostream>
+std::vector<int> comparisonCount;
 
 inline bool operator == (RecId lhs, RecId rhs) {
 	return (lhs.block == rhs.block && lhs.slot == rhs.slot);
@@ -1001,3 +1004,183 @@ int BPlusTree::bPlusDestroy(int rootBlockNum) {
     else // (block is not an index block.)
         return E_INVALIDBLOCK;
 }
+
+
+// RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
+//                              Attribute attrVal, int op)
+// {
+//     IndexId searchIndex;
+
+//     int ret = AttrCacheTable::getSearchIndex(relId, attrName, &searchIndex);
+
+//     AttrCatEntry attrCatEntry;
+//     ret = AttrCacheTable::getAttrCatEntry(relId, attrName, &attrCatEntry);
+
+//     if (attrCatEntry.rootBlock == -1)
+//         return RecId{-1, -1};
+
+//     // Find the height of the B+ Tree by following the leftmost path.
+//     int height = 1;
+//     int tempBlock = attrCatEntry.rootBlock;
+
+//     while (StaticBuffer::getStaticBlockType(tempBlock) == IND_INTERNAL)
+//     {
+//         IndInternal tempInternal(tempBlock);
+
+//         HeadInfo tempHead;
+//         tempInternal.getHeader(&tempHead);
+
+//         InternalEntry tempEntry;
+//         tempInternal.getEntry(&tempEntry, 0);
+
+//         tempBlock = tempEntry.lChild;
+//         height++;
+//     }
+
+//     // Initialize only if this is the first search or tree height changed.
+//     // Do NOT reset this vector for every search.
+//     if (comparisonCount.size() != height)
+//         comparisonCount.assign(height, 0);
+
+//     int block = -1, index = -1;
+//     int level = 0;
+
+//     if (searchIndex == IndexId{-1, -1})
+//     {
+//         block = attrCatEntry.rootBlock;
+//         index = 0;
+//     }
+//     else
+//     {
+//         // Resume from the next entry in the previously matched leaf.
+//         block = searchIndex.block;
+//         index = searchIndex.index + 1;
+
+//         // We are already at the leaf level.
+//         level = height - 1;
+
+//         IndLeaf leaf(block);
+
+//         HeadInfo leafHead;
+//         leaf.getHeader(&leafHead);
+
+//         if (index >= leafHead.numEntries)
+//         {
+//             block = leafHead.rblock;
+//             index = 0;
+
+//             if (block == -1)
+//                 return RecId{-1, -1};
+//         }
+//     }
+
+//     // Traverse internal nodes.
+//     while (StaticBuffer::getStaticBlockType(block) == IND_INTERNAL)
+//     {
+//         IndInternal internalBlk(block);
+
+//         HeadInfo intHead;
+//         internalBlk.getHeader(&intHead);
+
+//         InternalEntry intEntry;
+
+//         if (op == NE || op == LT || op == LE)
+//         {
+//             // These operators always move to the leftmost child.
+//             internalBlk.getEntry(&intEntry, 0);
+//             block = intEntry.lChild;
+//         }
+//         else
+//         {
+//             int entryindex = 0;
+
+//             while (entryindex < intHead.numEntries)
+//             {
+//                 ret = internalBlk.getEntry(&intEntry, entryindex);
+
+//                 // Count comparison at the current internal level.
+//                 comparisonCount[level]++;
+
+//                 int cmpVal = compareAttrs(
+//                     intEntry.attrVal,
+//                     attrVal,
+//                     attrCatEntry.attrType
+//                 );
+
+//                 if ((op == EQ && cmpVal >= 0) ||
+//                     (op == GE && cmpVal >= 0) ||
+//                     (op == GT && cmpVal > 0))
+//                 {
+//                     break;
+//                 }
+
+//                 entryindex++;
+//             }
+
+//             if (entryindex < intHead.numEntries)
+//                 block = intEntry.lChild;
+//             else
+//                 block = intEntry.rChild;
+//         }
+
+//         // Move one level down.
+//         level++;
+//     }
+
+//     // Search through the leaf nodes.
+//     while (block != -1)
+//     {
+//         IndLeaf leafBlk(block);
+
+//         HeadInfo leafHead;
+//         leafBlk.getHeader(&leafHead);
+
+//         Index leafEntry;
+
+//         while (index < leafHead.numEntries)
+//         {
+//             leafBlk.getEntry(&leafEntry, index);
+
+//             // Count comparison at the leaf level.
+//             comparisonCount[level]++;
+
+//             int cmpVal = compareAttrs(
+//                 leafEntry.attrVal,
+//                 attrVal,
+//                 attrCatEntry.attrType
+//             );
+
+//             if ((op == EQ && cmpVal == 0) ||
+//                 (op == LE && cmpVal <= 0) ||
+//                 (op == GE && cmpVal >= 0) ||
+//                 (op == LT && cmpVal < 0) ||
+//                 (op == GT && cmpVal > 0) ||
+//                 (op == NE && cmpVal != 0))
+//             {
+//                 searchIndex = IndexId{block, index};
+
+//                 AttrCacheTable::setSearchIndex(
+//                     relId, attrName, &searchIndex
+//                 );
+
+//                 return RecId{leafEntry.block, leafEntry.slot};
+//             }
+//             else if ((op == EQ || op == LE || op == LT) &&
+//                      cmpVal > 0)
+//             {
+//                 return RecId{-1, -1};
+//             }
+
+//             ++index;
+//         }
+
+//         // Only NE needs to continue through the entire leaf linked list.
+//         if (op != NE)
+//             break;
+
+//         block = leafHead.rblock;
+//         index = 0;
+//     }
+
+//     return RecId{-1, -1};
+// }

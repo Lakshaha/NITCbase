@@ -4,6 +4,12 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <vector>
+#include <iostream>
+using namespace std;
+
+extern std::vector<int> comparisonCount;
+
 
 bool isNumber(char *str);
 
@@ -457,3 +463,235 @@ bool isNumber(char *str){
     int ret = sscanf(str, "%f %n", &ignore, &len);
     return ret == 1 && len == strlen(str);
 }
+
+
+// int Algebra::join(
+//     char srcRelation1[ATTR_SIZE],
+//     char srcRelation2[ATTR_SIZE],
+//     char targetRelation[ATTR_SIZE],
+//     char attribute1[ATTR_SIZE],
+//     char attribute2[ATTR_SIZE]
+// )
+// {
+//     // Get relation1's and relation2's relId
+//     int relId1 = OpenRelTable::getRelId(srcRelation1);
+//     int relId2 = OpenRelTable::getRelId(srcRelation2);
+
+//     if (relId1 < 0 || relId1 >= MAX_OPEN ||
+//         relId2 < 0 || relId2 >= MAX_OPEN)
+//     {
+//         return E_RELNOTOPEN;
+//     }
+
+//     // Get attribute catalog entries
+//     AttrCatEntry attrCatEntry1, attrCatEntry2;
+
+//     if (AttrCacheTable::getAttrCatEntry(
+//             relId1, attribute1, &attrCatEntry1) == E_ATTRNOTEXIST)
+//     {
+//         return E_ATTRNOTEXIST;
+//     }
+
+//     if (AttrCacheTable::getAttrCatEntry(
+//             relId2, attribute2, &attrCatEntry2) == E_ATTRNOTEXIST)
+//     {
+//         return E_ATTRNOTEXIST;
+//     }
+
+//     // Check attribute types
+//     if (attrCatEntry1.attrType != attrCatEntry2.attrType)
+//     {
+//         return E_ATTRTYPEMISMATCH;
+//     }
+
+//     /*
+//         Check for duplicate attributes other than the join attributes.
+//     */
+
+//     RelCatEntry relCatEntry1, relCatEntry2;
+
+//     RelCacheTable::getRelCatEntry(relId1, &relCatEntry1);
+//     RelCacheTable::getRelCatEntry(relId2, &relCatEntry2);
+
+//     AttrCatEntry temp1, temp2;
+
+//     for (int j = 0; j < relCatEntry2.numAttrs; j++)
+//     {
+//         if (j == attrCatEntry2.offset)
+//             continue;
+
+//         AttrCacheTable::getAttrCatEntry(relId2, j, &temp2);
+
+//         for (int i = 0; i < relCatEntry1.numAttrs; i++)
+//         {
+//             AttrCacheTable::getAttrCatEntry(relId1, i, &temp1);
+
+//             if (strcmp(temp2.attrName, temp1.attrName) == 0)
+//             {
+//                 return E_DUPLICATEATTR;
+//             }
+//         }
+//     }
+
+//     int numOfAttributes1 = relCatEntry1.numAttrs;
+//     int numOfAttributes2 = relCatEntry2.numAttrs;
+
+//     /*
+//         If relation2 doesn't have an index on attribute2,
+//         create a B+ Tree index.
+//     */
+
+//     if (attrCatEntry2.rootBlock == -1)
+//     {
+//         int ret = BPlusTree::bPlusCreate(relId2, attribute2);
+
+//         if (ret != SUCCESS)
+//         {
+//             return E_DISKFULL;
+//         }
+//     }
+
+//     int numOfAttributesInTarget =
+//         numOfAttributes1 + numOfAttributes2 - 1;
+
+//     // Store target relation attribute names and types
+//     char targetRelAttrNames[numOfAttributesInTarget][ATTR_SIZE];
+//     int targetRelAttrTypes[numOfAttributesInTarget];
+
+//     // Copy attributes from relation1
+//     for (int i = 0; i < numOfAttributes1; i++)
+//     {
+//         AttrCacheTable::getAttrCatEntry(relId1, i, &temp1);
+
+//         strcpy(targetRelAttrNames[i], temp1.attrName);
+//         targetRelAttrTypes[i] = temp1.attrType;
+//     }
+
+//     // Copy attributes from relation2, excluding attribute2
+//     for (int j = 0; j < attrCatEntry2.offset; j++)
+//     {
+//         AttrCacheTable::getAttrCatEntry(relId2, j, &temp2);
+
+//         strcpy(targetRelAttrNames[numOfAttributes1 + j],
+//                temp2.attrName);
+
+//         targetRelAttrTypes[numOfAttributes1 + j] = temp2.attrType;
+//     }
+
+//     for (int j = attrCatEntry2.offset + 1;
+//          j < numOfAttributes2; j++)
+//     {
+//         AttrCacheTable::getAttrCatEntry(relId2, j, &temp2);
+
+//         strcpy(targetRelAttrNames[numOfAttributes1 + j - 1],
+//                temp2.attrName);
+
+//         targetRelAttrTypes[numOfAttributes1 + j - 1] =
+//             temp2.attrType;
+//     }
+
+//     // Create target relation
+//     int ret = Schema::createRel(
+//         targetRelation,
+//         numOfAttributesInTarget,
+//         targetRelAttrNames,
+//         targetRelAttrTypes
+//     );
+
+//     if (ret != SUCCESS)
+//     {
+//         return ret;
+//     }
+
+//     // Open target relation
+//     int targetRelId = OpenRelTable::openRel(targetRelation);
+
+//     if (targetRelId < 0 || targetRelId >= MAX_OPEN)
+//     {
+//         Schema::deleteRel(targetRelation);
+//         return targetRelId;
+//     }
+
+//     // Declare record arrays
+//     Attribute record1[numOfAttributes1];
+//     Attribute record2[numOfAttributes2];
+//     Attribute targetRecord[numOfAttributesInTarget];
+
+//     // Reset comparison counts ONCE before the entire JOIN.
+//     comparisonCount.clear();
+
+//     RelCacheTable::resetSearchIndex(relId1);
+
+//     // Outer loop: traverse relation1
+//     while (BlockAccess::project(relId1, record1) == SUCCESS)
+//     {
+//         // Reset relation2 search index for each outer record.
+//         RelCacheTable::resetSearchIndex(relId2);
+
+//         AttrCacheTable::resetSearchIndex(relId2, attribute2);
+
+//         /*
+//             Search relation2 for records matching:
+//             record1.attribute1 == record2.attribute2
+//         */
+
+//         while (BlockAccess::search(
+//             relId2,
+//             record2,
+//             attribute2,
+//             record1[attrCatEntry1.offset],
+//             EQ
+//         ) == SUCCESS)
+//         {
+//             // Copy all attributes from relation1
+//             for (int i = 0; i < numOfAttributes1; i++)
+//             {
+//                 targetRecord[i] = record1[i];
+//             }
+
+//             // Copy attributes from relation2 before join attribute
+//             for (int i = 0; i < attrCatEntry2.offset; i++)
+//             {
+//                 targetRecord[numOfAttributes1 + i] = record2[i];
+//             }
+
+//             // Copy attributes from relation2 after join attribute
+//             for (int i = attrCatEntry2.offset + 1;
+//                  i < numOfAttributes2; i++)
+//             {
+//                 targetRecord[numOfAttributes1 + i - 1] = record2[i];
+//             }
+
+//             // Insert joined record into target relation
+//             ret = BlockAccess::insert(targetRelId, targetRecord);
+
+//             if (ret != SUCCESS)
+//             {
+//                 OpenRelTable::closeRel(targetRelId);
+//                 Schema::deleteRel(targetRelation);
+//                 return E_DISKFULL;
+//             }
+//         }
+//     }
+
+//     // Print total B+ Tree comparisons across the entire JOIN.
+//     int totalComparisons = 0;
+
+//     cout << "\nTotal B+ Tree Comparisons Level-wise:\n";
+
+//     for (int i = 0; i < comparisonCount.size(); i++)
+//     {
+//         cout << "Level " << i + 1 << ": "
+//              << comparisonCount[i] << " comparisons\n";
+
+//         totalComparisons += comparisonCount[i];
+//     }
+
+//     cout << "Total Comparisons: "
+//          << totalComparisons << endl;
+
+//     // Close target relation
+//     OpenRelTable::closeRel(targetRelId);
+
+//     return SUCCESS;
+// }
