@@ -1,10 +1,6 @@
 #include "BlockAccess.h"
 
 #include <cstring>
-#include<iostream>
-#include<vector>
-using namespace std;
-
 
 
 RecId BlockAccess::linearSearch(int relId, char attrName[ATTR_SIZE], union Attribute attrVal, int op){

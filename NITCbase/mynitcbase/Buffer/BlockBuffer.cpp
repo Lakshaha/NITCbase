@@ -3,10 +3,6 @@
 #include <cstdlib>
 #include <cstring>
 
-int totalBlockAccess = 0;
-int diskBlockAccess = 0;
-int bufferBlockAccess = 0;
-
 /* ________ CONSTRUCTORS _________ */
 
 // BlockBuffer(char blockType)  [constructor 1]
@@ -201,11 +197,10 @@ int BlockBuffer::getFreeBlock(int blockType){
 int BlockBuffer :: loadBlockAndGetBufferPtr(unsigned char **buffPtr){
     // check whether the block is already present in the buffer using StaticBuffer.getBufferNum();
     int bufferNum = StaticBuffer :: getBufferNum(this->blockNum);
-    totalBlockAccess++;
+
     // if buffer is present
         // set the timeStamp of the corresponding buffer at bufferMetaInfo to 0, rest increment by one
     if(bufferNum != E_BLOCKNOTINBUFFER){
-        bufferBlockAccess++;
         for(int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++){
             if(bufferIndex == bufferNum){
                 StaticBuffer::metainfo[bufferIndex].timeStamp = 0;
@@ -221,7 +216,6 @@ int BlockBuffer :: loadBlockAndGetBufferPtr(unsigned char **buffPtr){
             return E_OUTOFBOUND;
         }
 
-        diskBlockAccess++;
         Disk :: readBlock(StaticBuffer :: blocks[bufferNum], this->blockNum);
     }
 
@@ -543,3 +537,4 @@ int compareAttrs(union Attribute attr1, union Attribute attr2, int attrType){
         return 0;
     }
 }
+

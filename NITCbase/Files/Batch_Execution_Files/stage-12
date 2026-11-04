@@ -1,0 +1,26 @@
+SELECT name FROM Locations JOIN Events INTO EventLocations WHERE Locations.name = Events.location;
+
+
+2. SELECT * FROM Events INTO AudiEvents WHERE location=Audi;
+OPEN TABLE AudiEvents;
+SELECT regNo, event FROM Participants JOIN AudiEvents INTO AudiPeople WHERE Participants.event = AudiEvents.title;
+ALTER TABLE RENAME AudiPeople COLUMN event TO eventName;
+
+
+3. SELECT * FROM Locations INTO Cap100 WHERE capacity>=100;
+OPEN TABLE Cap100;
+SELECT * FROM Cap100 INTO MidLoc WHERE capacity<=200;
+OPEN TABLE MidLoc;
+SELECT * FROM Events JOIN MidLoc INTO MidEvents WHERE Events.location = MidLoc.name;
+OPEN TABLE MidEvents;
+SELECT regNo, event FROM Participants JOIN MidEvents INTO MiniEventPeople WHERE Participants.event = MidEvents.title;
+ALTER TABLE RENAME MiniEventPeople COLUMN event TO eventName;
+
+
+SELECT * FROM Participants JOIN Events INTO PartEvents WHERE Participants.event = Events.title;
+SELECT regNo, event, location, name FROM PartEvents JOIN Organizers INTO ParticipantInfo WHERE PartEvents.id = Organizers.eventId;
+
+SELECT * FROM Organizers INTO ThomasEvents WHERE name = Thomas;
+SELECT * FROM Events JOIN ThomasEvents INTO ThomasEventInfo WHERE Events.id = ThomasEvents.eventId;
+SELECT regNo, event FROM Participants JOIN ThomasEventInfo INTO ThomasParticipants WHERE Participants.event = ThomasEventInfo.title;
+

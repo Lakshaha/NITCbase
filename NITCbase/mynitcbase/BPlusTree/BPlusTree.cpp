@@ -1,11 +1,6 @@
 #include "BPlusTree.h"
 
 #include <cstring>
-#include<iostream>
-#include<vector>
-using namespace std;
-
-// int totalComparisons=0;
 
 inline bool operator == (RecId lhs, RecId rhs) {
 	return (lhs.block == rhs.block && lhs.slot == rhs.slot);
@@ -26,10 +21,6 @@ inline bool operator != (IndexId lhs, IndexId rhs) {
 RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE], 
                                 Attribute attrVal, int op) 
 {
-    // cout << "B+ Search started. Current comparisons: "
-    //  << totalComparisons << endl;
-
-    // totalComparisons = 0;
     // declare searchIndex which will be used to store search index for attrName.
     IndexId searchIndex;
 
@@ -148,7 +139,7 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
             while (entryindex < intHead.numEntries)
             {
                 ret = internalBlk.getEntry(&intEntry, entryindex);
-                // totalComparisons++;
+                
                 int cmpVal = compareAttrs(intEntry.attrVal, attrVal, attrCatEntry.attrType);
                 if (
                     (op == EQ && cmpVal >= 0) ||
@@ -174,7 +165,7 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
             }
 
             // index = 0;
-        } //to reach internal
+        }
     }
 
     // NOTE: `block` now has the block number of a leaf index block.
@@ -199,7 +190,7 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
             // load entry corresponding to block and index into leafEntry
             // using IndLeaf::getEntry().
             leafBlk.getEntry(&leafEntry, index);
-            // totalComparisons++;
+
             // comparison between leafEntry's attribute value and input attrVal using compareAttrs()
             int cmpVal = compareAttrs(leafEntry.attrVal, attrVal, attrCatEntry.attrType); 
 
@@ -243,11 +234,6 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
         // update index to 0.
         block = leafHead.rblock, index = 0;
     }
-
-    // totalComparisons++;
-    // cout << "Comparison count: " << totalComparisons << endl;
-
-    // cout<<"\n Comparisons: "<<totalComparisons<<endl;
 
     // no entry satisying the op was found; return the recId {-1,-1}
     return RecId{-1, -1};
@@ -1015,52 +1001,3 @@ int BPlusTree::bPlusDestroy(int rootBlockNum) {
     else // (block is not an index block.)
         return E_INVALIDBLOCK;
 }
-
-// #include <iostream>
-// using namespace std;
-
-// void BPlusTree::printTree(int rootBlock, int relId, char attrName[ATTR_SIZE]){
-//     int type = StaticBuffer::getStaticBlockType(rootBlock); 
-
-//     AttrCatEntry attrCatEntry;
-//     AttrCacheTable::getAttrCatEntry(relId, attrName, &attrCatEntry);
-
-//     int rootBlockNum = attrCatEntry.rootBlock;
-
-//     if(rootBlock == rootBlockNum){
-//         cout << "Root Block: " << rootBlock << endl;
-//     }    
-
-
-//     else{
-//         if(type == IND_LEAF){
-//             cout << "Leaf Block: " << rootBlock << endl;
-//         }
-//         else if(type == IND_INTERNAL){
-//             cout << "Internal Block: " << rootBlock << endl;
-//         }
-//     }
-
-//     if(type == IND_LEAF){
-//         return;
-//     }
-
-//     if(type == IND_INTERNAL){
-//         IndInternal internalBlock(rootBlock);
-//         HeadInfo blockHeader;
-//         internalBlock.getHeader(&blockHeader);
-
-//         InternalEntry blockEntry;
-//         internalBlock.getEntry(&blockEntry, 0);
-
-//         printTree(blockEntry.lChild, relId, attrName);
-
-//         for(int entry = 0; entry < blockHeader.numEntries; entry++){
-//             internalBlock.getEntry(&blockEntry, entry);
-//             printTree(blockEntry.rChild, relId, attrName);
-//         }
-//         return;
-//     }
-
-//     return;
-// }
