@@ -1,0 +1,426 @@
+Stage-1: Understanding the disk interface
+main()
+  │
+  ├── Disk disk_run
+  │
+  ├── Disk::readBlock(buffer, blockNum)
+  │
+  ├── Modify buffer
+  │
+  ├── Disk::writeBlock(buffer, blockNum)
+  │
+  └── Disk::~Disk()
+
+Stage-2: Record blocks and catalogs
+main()
+   │
+   ├── Disk disk_run
+   │
+   ├── RecBuffer relCatBuffer(RELCAT_BLOCK)
+   │
+   ├── RecBuffer attrCatBuffer(ATTRCAT_BLOCK)
+   │
+   ├── relCatBuffer.getHeader()
+   │
+   ├── attrCatBuffer.getHeader()
+   │
+   ├── relCatBuffer.getRecord()
+   │
+   └── attrCatBuffer.getRecord()
+           │
+           └── Print relation and attribute details
+
+Stage 3 — Disk buffer and catalog caches
+Request for a block
+       │
+       ▼
+BlockBuffer::getHeader()
+       │
+       ▼
+loadBlockAndGetBufferPtr()
+       │
+       ▼
+StaticBuffer::getBufferNum()
+       │
+       ├── Block found
+       │       └── Return buffer pointer
+       │
+       └── Block not found
+               │
+               ▼
+        StaticBuffer::getFreeBuffer()
+               │
+               ▼
+        Disk::readBlock()
+               │
+               ▼
+        Return buffer pointer
+
+Stage 4 — Linear search on relations
+SELECT command
+     │
+     ▼
+Frontend Interface
+     │
+     ▼
+Algebra::select()
+     │
+     ├── AttrCacheTable::getAttrCatEntry()
+     │
+     ├── RelCacheTable::resetSearchIndex()
+     │
+     ▼
+BlockAccess::search()
+     │
+     ▼
+BlockAccess::linearSearch()
+     │
+     ├── RelCacheTable::getSearchIndex()
+     │
+     ├── RecBuffer::getHeader()
+     │
+     ├── RecBuffer::getSlotMap()
+     │
+     ├── RecBuffer::getRecord()
+     │
+     ├── compareAttrs()
+     │
+     └── RelCacheTable::setSearchIndex()
+
+Stage 5 — Opening / Closing relations
+OPEN TABLE Students
+        │
+        ▼
+Frontend
+        │
+        ▼
+Schema::openRel()
+        │
+        ▼
+OpenRelTable::openRel()
+        │
+        ├── getRelId()
+        │
+        ├── getFreeOpenRelTableEntry()
+        │
+        ├── BlockAccess::linearSearch()
+        │       └── Find relation in RELCAT
+        │
+        ├── Allocate RelCacheEntry
+        │
+        ├── Find attributes in ATTRCAT
+        │
+        ├── Allocate AttrCacheEntry
+        │
+        └── Update tableMetaInfo
+
+
+CLOSE TABLE Students
+        │
+        ▼
+Schema::closeRel()
+        │
+        ▼
+OpenRelTable::closeRel()
+        │
+        ├── Validate relId
+        ├── Free relation cache memory
+        ├── Free attribute cache memory
+        └── Mark tableMetaInfo entry as free
+
+Stage 6 — Buffer management and disk write-back
+Request new block
+      │
+      ▼
+StaticBuffer::getFreeBuffer()
+      │
+      ├── Free slot exists
+      │       └── Use it
+      │
+      └── Buffer full
+              │
+              ▼
+        Find highest timestamp
+              │
+              ▼
+        Select LRU block
+              │
+              ▼
+        Check dirty bit
+              │
+              ├── Dirty = true
+              │       └── Disk::writeBlock()
+              │
+              └── Dirty = false
+                      └── No write-back
+
+
+Stage 7 — Inserting records into relations
+INSERT INTO Students VALUES(...)
+          │
+          ▼
+Frontend::insert_into_table_values()
+          │
+          ▼
+Algebra::insert()
+          │
+          ├── Validate attribute count
+          ├── Validate data types
+          ├── Convert input into Attribute[]
+          │
+          ▼
+BlockAccess::insert()
+          │
+          ├── RelCacheTable::getRelCatEntry()
+          │
+          ├── Traverse relation blocks
+          │
+          ├── RecBuffer::getHeader()
+          │
+          ├── RecBuffer::getSlotMap()
+          │
+          ├── Find free slot
+          │
+          ├── If no free slot:
+          │       RecBuffer() [allocation constructor]
+          │       BlockBuffer::getBlockNum()
+          │       BlockBuffer::setHeader()
+          │       RecBuffer::setSlotMap()
+          │
+          ├── RecBuffer::setRecord()
+          ├── RecBuffer::setSlotMap()
+          │
+          └── Update relation cache
+
+Stage 8 — Creating and deleting relations
+CREATE TABLE Students(...)
+          │
+          ▼
+Frontend::create_table()
+          │
+          ▼
+Schema::createRel()
+          │
+          ├── Validate relation name
+          ├── Check duplicate attributes
+          │
+          ├── BlockAccess::insert()
+          │       └── Insert into RELCAT
+          │
+          └── BlockAccess::insert()
+                  └── Insert into ATTRCAT
+
+DROP TABLE Students
+          │
+          ▼
+Frontend::drop_table()
+          │
+          ▼
+Schema::deleteRel()
+          │
+          ├── Validate relation
+          ├── Ensure relation is closed
+          │
+          ▼
+BlockAccess::deleteRelation()
+          │
+          ├── Traverse record blocks
+          ├── BlockBuffer::releaseBlock()
+          ├── Delete RELCAT entry
+          └── Delete ATTRCAT entries
+
+Stage 9 — Selection and projection
+SELECT * FROM Students INTO Result WHERE marks > 80
+                         │
+                         ▼
+              Frontend Interface
+                         │
+                         ▼
+                 Algebra::select()
+                         │
+              ┌──────────┴──────────┐
+              │                    │
+       Schema::createRel()    Validate condition
+              │                    │
+              └──────────┬─────────┘
+                         │
+                 BlockAccess::search()
+                         │
+                  Search matching record
+                         │
+                 BlockAccess::insert()
+                         │
+                  Insert into Result
+                         │
+                  Repeat until no match
+
+Algebra::project()
+       │
+       ├── Schema::createRel()
+       │
+       ├── BlockAccess::project()
+       │       ├── Read next record
+       │       └── Update search position
+       │
+       ├── Pick required attributes
+       │
+       └── BlockAccess::insert()
+               └── Insert into target
+
+Stage 10 — B+ Tree search on relations
+Algebra::select()
+       │
+       ├── AttrCacheTable::resetSearchIndex()
+       │
+       ▼
+BlockAccess::search()
+       │
+       ├── AttrCacheTable::getAttrCatEntry()
+       │
+       ├── Check RootBlock
+       │
+       ├── RootBlock == -1
+       │       └── BlockAccess::linearSearch()
+       │
+       └── RootBlock != -1
+               │
+               ▼
+        BPlusTree::bPlusSearch()
+               │
+               ├── AttrCacheTable::getSearchIndex()
+               ├── IndInternal::getEntry()
+               ├── Navigate to appropriate child
+               ├── IndLeaf::getEntry()
+               ├── Compare attribute values
+               └── AttrCacheTable::setSearchIndex()
+
+
+Stage 11 — Index creation and deletion
+CREATE INDEX ON Students(cgpa)
+              │
+              ▼
+Frontend::create_index()
+              │
+              ▼
+Schema::createIndex()
+              │
+              ├── Validate relation is open
+              ├── Validate attribute
+              │
+              ▼
+BPlusTree::bPlusCreate()
+              │
+              ├── Allocate root block
+              ├── Update RootBlock in AttrCache
+              ├── Read every relation record
+              │
+              └── BPlusTree::bPlusInsert()
+                      │
+                      ├── findLeafToInsert()
+                      ├── insertIntoLeaf()
+                      ├── splitLeaf()
+                      ├── insertIntoInternal()
+                      ├── splitInternal()
+                      └── createNewRoot()
+
+DROP INDEX ON Students(cgpa)
+              │
+              ▼
+Frontend::drop_index()
+              │
+              ▼
+Schema::dropIndex()
+              │
+              ├── Get RootBlock from AttrCache
+              │
+              ▼
+BPlusTree::bPlusDestroy()
+              │
+              ├── Check block type
+              ├── If leaf: release block
+              └── If internal:
+                     Recursively destroy children
+              │
+              ▼
+Update RootBlock = -1
+              │
+              ▼
+OpenRelTable::closeRel()
+              │
+              ▼
+Write updated attribute catalog
+
+
+insertIntoLeaf()
+      │
+      ▼
+Is leaf full?
+      │
+      ├── No → Insert entry
+      │
+      └── Yes
+            │
+            ▼
+         splitLeaf()
+            │
+            ▼
+      Insert separator
+            │
+            ▼
+    insertIntoInternal()
+            │
+            ▼
+     Is internal full?
+            │
+            ├── No → Done
+            │
+            └── Yes → splitInternal()
+                          │
+                          ▼
+                    createNewRoot()
+
+Stage 12 — Join on relations
+SELECT * FROM R1 JOIN R2 INTO R3
+WHERE R1.attr1 = R2.attr2
+                 │
+                 ▼
+            Algebra::join()
+                 │
+                 ├── Validate R1 and R2
+                 ├── Find join attributes
+                 ├── Check attribute types
+                 ├── Validate attribute names
+                 │
+                 ├── Check index on R2.attr2
+                 │       │
+                 │       └── If absent:
+                 │              BPlusTree::bPlusCreate()
+                 │
+                 ├── Schema::createRel(R3)
+                 │
+                 ▼
+          Fetch R1 records
+                 │
+                 ▼
+          BlockAccess::project()
+                 │
+                 ▼
+          For every R1 record
+                 │
+                 ▼
+          BlockAccess::search(R2)
+                 │
+                 ▼
+          BPlusTree::bPlusSearch()
+                 │
+                 ▼
+          Fetch matching R2 records
+                 │
+                 ▼
+          Combine both records
+                 │
+                 ▼
+          BlockAccess::insert(R3)
+                 │
+                 ▼
+          Repeat until R1 exhausted

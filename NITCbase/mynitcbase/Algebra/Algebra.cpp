@@ -342,12 +342,16 @@ int Algebra::project(char srcRel[ATTR_SIZE],
 */
 
 // ex/tern int totalBlockAccess;
-extern int totalComparisons;
+// extern int totalComparisons;
+
+extern int totalBlockAccess;
+extern int diskBlockAccess;
+extern int bufferBlockAccess;
 
 int Algebra::join(char srcRelation1[ATTR_SIZE], char srcRelation2[ATTR_SIZE], char targetRelation[ATTR_SIZE], char attribute1[ATTR_SIZE], char attribute2[ATTR_SIZE])
 {
     // totalBlockAccess=0;
-    totalComparisons=0;
+    // totalComparisons=0;
     // get relation1's and relation2's relId
     int relId1 = OpenRelTable::getRelId(srcRelation1);
     int relId2 = OpenRelTable::getRelId(srcRelation2);
@@ -502,9 +506,15 @@ int Algebra::join(char srcRelation1[ATTR_SIZE], char srcRelation2[ATTR_SIZE], ch
     // cout << "Total Comparisons: " << totalComparisons << endl;
     // cout << "-------------------------------------" << endl;
 
-    cout << "\n---------- JOIN STATISTICS ----------" << endl;
-    cout << "Total Comparisons: " << totalComparisons << endl;
-    cout << "-------------------------------------" << endl;
+    // cout << "\n---------- JOIN STATISTICS ----------" << endl;
+    // cout << "Total Comparisons: " << totalComparisons << endl;
+    // cout << "-------------------------------------" << endl;
+
+    cout << "\n========== JOIN STATISTICS ==========" << endl;
+    cout << "Total Block Accesses  : " << totalBlockAccess << endl;
+    cout << "Disk Block Accesses   : " << diskBlockAccess << endl;
+    cout << "Buffer Block Accesses : " << bufferBlockAccess << endl;
+    cout << "=====================================" << endl;
 
     OpenRelTable::closeRel(targetRelId);
     return SUCCESS;

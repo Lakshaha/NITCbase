@@ -5,7 +5,7 @@
 #include<vector>
 using namespace std;
 
-int totalComparisons=0;
+// int totalComparisons=0;
 
 inline bool operator == (RecId lhs, RecId rhs) {
 	return (lhs.block == rhs.block && lhs.slot == rhs.slot);
@@ -148,7 +148,7 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
             while (entryindex < intHead.numEntries)
             {
                 ret = internalBlk.getEntry(&intEntry, entryindex);
-                totalComparisons++;
+                // totalComparisons++;
                 int cmpVal = compareAttrs(intEntry.attrVal, attrVal, attrCatEntry.attrType);
                 if (
                     (op == EQ && cmpVal >= 0) ||
@@ -199,7 +199,7 @@ RecId BPlusTree::bPlusSearch(int relId, char attrName[ATTR_SIZE],
             // load entry corresponding to block and index into leafEntry
             // using IndLeaf::getEntry().
             leafBlk.getEntry(&leafEntry, index);
-            totalComparisons++;
+            // totalComparisons++;
             // comparison between leafEntry's attribute value and input attrVal using compareAttrs()
             int cmpVal = compareAttrs(leafEntry.attrVal, attrVal, attrCatEntry.attrType); 
 
